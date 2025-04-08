@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atlanta RnB Radio</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0e6ff;
+            /* Light purple background */
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        .player-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .radio-logo {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+            background-color: #3498db;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .radio-logo i {
+            font-size: 60px;
+            color: white;
+        }
+
+        .station-list {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .station-item {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .station-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .station-item.active {
+            background-color: #e0f7fa;
+            font-weight: bold;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .now-playing {
+            text-align: center;
+            font-size: 18px;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #e0f7fa;
+            border-radius: 4px;
+        }
+
+        .add-station {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        input {
+            padding: 10px;
+            width: 100%;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .volume-control input {
+            width: 200px;
+            margin: 0 10px;
+        }
+
+        .metadata {
+            text-align: center;
+            font-size: 16px;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            min-height: 24px;
+        }
+
+        .station-name {
+            flex: 1;
+        }
+
+        .station-genre {
+            color: #666;
+            font-size: 0.9em;
+            margin-left: 20px;
+            padding: 4px 8px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+    </style>
+    <!-- Add Font Awesome for the radio icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <h1>Atlanta RnB/Jazz Radio</h1>
+
+    <div class="player-container">
+        <div class="radio-logo">
+            <i class="fas fa-broadcast-tower"></i>
+        </div>
+        <div class="now-playing" id="now-playing">Not playing</div>
+
+        <div class="controls">
+            <button id="play-stop-btn">Play</button>
+        </div>
+    </div>
+
+    <div class="station-list">
+        <h2>Stations</h2>
+        <div id="stations-container">
+            <!-- Stations will be added here -->
+        </div>
+    </div>
+
+    <!-- Add hls.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+    <script>
+        // Default stations
+        const stations = [
+            {
+                name: "The Beat 96.1",
+                url: "https://n09a-e2.revma.ihrhls.com/zc741/9_49bi1ctiriuv02/playlist.m3u8",
+                genre: "Hip Hop & R&B"
+            },
+            {
+                name: "KISS 104.1",
+                url: "https://ad-oom-cmg.streamguys1.com/atl1041/atl1041-iheart.aac?clientType=web&host=webapp.US&modTime=1744117586953&profileid=10400984957&terminalid=159&territory=US&us_privacy=1-N-&callLetters=WALR-FM&devicename=web-mobile&stationid=5885&dist=iheart&subscription_type=free&country=US&locale=en-US&site-url=https%3A%2F%2Fwww.iheart.com%2Flive%2Fkiss-1041-5885%2F",
+                genre: "R&B"
+            },
+            {
+                name: "WCLK Jazz 91.9",
+                url: "https://17993.live.streamtheworld.com/WCLKFM.mp3?uuid=8islohksb",
+                genre: "Jazz"
+            },
+            {
+                name: "WRG 89.3",
+                url: "https://s2.radio.co/s2133c4bad/listen",
+                genre: "R&B"
+            },
+            {
+                name: "103.3 WVEE",
+                url: "https://prod-3-88-230-109.amperwave.net/audacy-wveefmaac-hlsc.m3u8?apv=a2&dist=Audacy&source=webA2&gpp=DBABrGA%7EBVQVAAAABWA.QA%7EBUUAAAFY.QA%7EBVUAABY%7EBVUAAFg.QA%7EBVFAAAWA%7EBVUAAAFg.QA&a2_app_version=16.13.0&a2_session_id=fd626783-6706-1b82-aebb-c44b58a61521&deviceid=app%3Af8k%3A7fc1bf204a045f87e0b18329332f3d6d&c_user_id=f8k%3A7fc1bf204a045f87e0b18329332f3d6d&sc=0",
+                genre: "R&B"
+            }
+        ];
+
+        // DOM elements
+        const playStopBtn = document.getElementById('play-stop-btn');
+        const nowPlaying = document.getElementById('now-playing');
+        const stationsContainer = document.getElementById('stations-container');
+
+        // Audio element
+        const audio = new Audio();
+        audio.volume = 0.5; // Set default volume
+
+        // HLS instance
+        let hls = null;
+
+        // Current station
+        let currentStation = null;
+        let isPlaying = false;
+
+        // Initialize
+        function init() {
+            // Render stations
+            renderStations();
+
+            // Set up event listeners
+            playStopBtn.addEventListener('click', togglePlayback);
+
+            // Handle audio events
+            audio.addEventListener('playing', () => {
+                isPlaying = true;
+                playStopBtn.textContent = 'Stop';
+                nowPlaying.textContent = `Now playing: ${currentStation.name}`;
+            });
+
+            audio.addEventListener('ended', () => {
+                stopPlayback();
+            });
+
+            audio.addEventListener('error', (e) => {
+                console.error('Audio error:', e);
+                nowPlaying.textContent = `Error playing: ${currentStation.name}`;
+                stopPlayback();
+            });
+
+            // Auto-select a random station if none is selected
+            if (stations.length > 0 && !currentStation) {
+                const randomIndex = Math.floor(Math.random() * stations.length);
+                selectStation(stations[randomIndex], true); // Auto-play the random station
+            }
+        }
+
+        // Render stations
+        function renderStations() {
+            stationsContainer.innerHTML = '';
+
+            stations.forEach((station, index) => {
+                const stationElement = document.createElement('div');
+                stationElement.className = 'station-item';
+                if (currentStation && currentStation.name === station.name) {
+                    stationElement.classList.add('active');
+                }
+
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'station-name';
+                nameSpan.textContent = station.name;
+
+                const genreSpan = document.createElement('span');
+                genreSpan.className = 'station-genre';
+                genreSpan.textContent = station.genre;
+
+                stationElement.appendChild(nameSpan);
+                stationElement.appendChild(genreSpan);
+
+                stationElement.addEventListener('click', () => {
+                    selectStation(station, true); // Auto-play when station is selected
+                });
+                stationsContainer.appendChild(stationElement);
+            });
+        }
+
+        // Select a station
+        function selectStation(station, autoPlay = true) {
+            currentStation = station;
+            renderStations();
+
+            // Update now playing text
+            nowPlaying.textContent = `Selected: ${currentStation.name} (Click Play to start)`;
+
+            // Only auto-play if explicitly requested
+            if (autoPlay) {
+                playCurrentStation();
+            }
+        }
+
+        // Toggle playback
+        function togglePlayback() {
+            if (isPlaying) {
+                stopPlayback();
+            } else {
+                playCurrentStation();
+            }
+        }
+
+        // Play current station
+        function playCurrentStation() {
+            if (!currentStation) {
+                alert('Please select a station first');
+                return;
+            }
+
+            // Stop any existing playback
+            stopPlayback();
+
+            // Check if the URL is an HLS stream
+            if (currentStation.url.includes('.m3u8')) {
+                // Use hls.js for HLS streams
+                if (Hls.isSupported()) {
+                    if (hls) {
+                        hls.destroy();
+                    }
+
+                    hls = new Hls();
+                    hls.loadSource(currentStation.url);
+                    hls.attachMedia(audio);
+
+                    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                        audio.play().catch(error => {
+                            console.error('Playback error:', error);
+                            nowPlaying.textContent = `Error: ${error.message}`;
+                        });
+                    });
+
+                    hls.on(Hls.Events.ERROR, (event, data) => {
+                        console.error('HLS error:', data);
+                        if (data.fatal) {
+                            nowPlaying.textContent = `Error: ${data.type} - ${data.details}`;
+                            stopPlayback();
+                        }
+                    });
+                } else {
+                    // Fallback for browsers that don't support HLS.js
+                    nowPlaying.textContent = 'HLS playback not supported in this browser';
+                }
+            } else {
+                // For non-HLS streams, use the standard Audio API
+                audio.src = currentStation.url;
+                audio.play().catch(error => {
+                    console.error('Playback error:', error);
+                    nowPlaying.textContent = `Error: ${error.message}`;
+                });
+            }
+        }
+
+        // Stop playback
+        function stopPlayback() {
+            if (hls) {
+                hls.destroy();
+                hls = null;
+            }
+
+            audio.pause();
+            audio.currentTime = 0;
+            audio.src = '';
+            isPlaying = false;
+            playStopBtn.textContent = 'Play';
+            nowPlaying.textContent = currentStation ? `Selected: ${currentStation.name}` : 'Not playing';
+        }
+
+        // Initialize the app
+        init();
+    </script>
+</body>
+
+</html>
