@@ -361,7 +361,7 @@
                     hls.on(Hls.Events.MANIFEST_PARSED, () => {
                         audio.play().catch(error => {
                             console.error('Playback error:', error);
-                            nowPlaying.textContent = `Error: ${error.message}`;
+                            nowPlaying.textContent = `Click play to start ${currentStation.name}`;
                         });
                     });
 
@@ -381,7 +381,7 @@
                 audio.src = currentStation.url;
                 audio.play().catch(error => {
                     console.error('Playback error:', error);
-                    nowPlaying.textContent = `Error: ${error.message}`;
+                    nowPlaying.textContent = `Click play to start ${currentStation.name}`;
                 });
             }
         }
