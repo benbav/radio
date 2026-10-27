@@ -11,8 +11,8 @@
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f0e6ff;
-            /* Light purple background */
+            background-color: var(--page-bg);
+            transition: background-color 0.6s;
             color: #333;
         }
 
@@ -30,11 +30,20 @@
             text-align: center;
         }
 
+        /* Accent colors; changed per station in JS */
+        :root {
+            --accent: #3498db;
+            --accent-2: #9b59b6;
+            --accent-soft: #3498db22;
+            --page-bg: #f0e6ff;
+        }
+
         .radio-logo {
             width: 120px;
             height: 120px;
             margin: 0 auto 20px;
-            background-color: #3498db;
+            background-color: var(--accent);
+            transition: background-color 0.4s;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -70,35 +79,9 @@
         }
 
         .station-item.active {
-            background-color: #e0f7fa;
+            background-color: var(--accent-soft);
+            box-shadow: inset 4px 0 0 var(--accent);
             font-weight: bold;
-        }
-
-        .controls {
-            display: flex;
-            justify-content: center;
-            margin: 20px 0;
-        }
-
-        button {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            margin: 0 5px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.2s;
-        }
-
-        button:hover {
-            background-color: #2980b9;
-        }
-
-        button:disabled {
-            background-color: #95a5a6;
-            cursor: not-allowed;
         }
 
         .now-playing {
@@ -106,8 +89,9 @@
             font-size: 18px;
             margin: 20px 0;
             padding: 10px;
-            background-color: #e0f7fa;
+            background-color: var(--accent-soft);
             border-radius: 4px;
+            transition: background-color 0.4s;
         }
 
         .add-station {
@@ -153,6 +137,81 @@
             flex: 1;
         }
 
+        .station-city {
+            display: block;
+            color: #888;
+            font-size: 0.8em;
+            font-weight: normal;
+        }
+
+        .shuffle-row {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .shuffle-btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.4s, transform 0.1s;
+        }
+
+        .shuffle-btn:hover {
+            filter: brightness(1.1);
+        }
+
+        .shuffle-btn:active {
+            transform: scale(0.96);
+        }
+
+        .eq-canvas {
+            display: block;
+            width: 100%;
+            height: 90px;
+            margin: 0 auto 10px;
+        }
+
+        /* Mini EQ bars on the active station row */
+        .mini-eq {
+            display: inline-flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 14px;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        .mini-eq span {
+            width: 3px;
+            height: 3px;
+            background-color: var(--accent);
+            border-radius: 1px;
+        }
+
+        body.is-playing .mini-eq span {
+            animation: mini-eq-bounce 0.9s ease-in-out infinite;
+        }
+
+        body.is-playing .mini-eq span:nth-child(2) {
+            animation-delay: -0.3s;
+            animation-duration: 0.7s;
+        }
+
+        body.is-playing .mini-eq span:nth-child(3) {
+            animation-delay: -0.6s;
+            animation-duration: 1.1s;
+        }
+
+        @keyframes mini-eq-bounce {
+            0%, 100% { height: 3px; }
+            50% { height: 14px; }
+        }
+
         .station-genre {
             color: #666;
             font-size: 0.9em;
@@ -169,15 +228,17 @@
 <body>
     <h1>Atlanta RnB/Jazz Radio</h1>
 
+    <div class="shuffle-row">
+        <button class="shuffle-btn" id="shuffle-btn"><i class="fas fa-shuffle"></i> Shuffle</button>
+    </div>
+
     <div class="player-container">
         <div class="radio-logo">
             <i class="fas fa-broadcast-tower"></i>
         </div>
-        <div class="now-playing" id="now-playing">Not playing</div>
-
-        <div class="controls">
-            <button id="play-stop-btn">Play</button>
-        </div>
+        <canvas class="eq-canvas" id="eq-canvas"></canvas>
+        <div class="now-playing" id="now-playing">Tap a station to play</div>
+        <div class="metadata" id="track-info" hidden></div>
     </div>
 
     <div class="station-list">
@@ -188,67 +249,198 @@
     </div>
 
     <!-- Add hls.js library -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13"></script>
 
     <script>
         // Default stations
         const stations = [
             {
                 name: "The Beat 96.1",
-                url: "https://n09a-e2.revma.ihrhls.com/zc741/9_49bi1ctiriuv02/playlist.m3u8",
+                city: "Atlanta, GA",
+                url: "https://stream.revma.ihrhls.com/zc741",
                 genre: "Hip Hop & R&B"
             },
             {
                 name: "KISS 104.1",
+                city: "Atlanta, GA",
                 url: "https://ad-oom-cmg.streamguys1.com/atl1041/atl1041-iheart.aac?clientType=web&host=webapp.US&modTime=1744117586953&profileid=10400984957&terminalid=159&territory=US&us_privacy=1-N-&callLetters=WALR-FM&devicename=web-mobile&stationid=5885&dist=iheart&subscription_type=free&country=US&locale=en-US&site-url=https%3A%2F%2Fwww.iheart.com%2Flive%2Fkiss-1041-5885%2F",
                 genre: "R&B"
             },
             {
                 name: "WCLK Jazz 91.9",
-                url: "https://17993.live.streamtheworld.com/WCLKFM.mp3?uuid=8islohksb",
+                city: "Atlanta, GA",
+                url: "https://playerservices.streamtheworld.com/api/livestream-redirect/WCLKFM.mp3",
                 genre: "Jazz"
             },
             {
-                name: "WRG 89.3",
+                name: "WRFG 89.3",
+                city: "Atlanta, GA",
                 url: "https://s2.radio.co/s2133c4bad/listen",
+                trackApi: "radioco:s2133c4bad",
                 genre: "R&B"
             },
             {
                 name: "103.3 WVEE",
-                url: "https://prod-3-88-230-109.amperwave.net/audacy-wveefmaac-hlsc.m3u8?apv=a2&dist=Audacy&source=webA2&gpp=DBABrGA%7EBVQVAAAABWA.QA%7EBUUAAAFY.QA%7EBVUAABY%7EBVUAAFg.QA%7EBVFAAAWA%7EBVUAAAFg.QA&a2_app_version=16.13.0&a2_session_id=fd626783-6706-1b82-aebb-c44b58a61521&deviceid=app%3Af8k%3A7fc1bf204a045f87e0b18329332f3d6d&c_user_id=f8k%3A7fc1bf204a045f87e0b18329332f3d6d&sc=0",
+                city: "Atlanta, GA",
+                url: "https://live.amperwave.net/direct/audacy-wveefmaac-imc",
                 genre: "R&B"
             },
             {
                 name: "KKJZ Modern",
+                city: "Long Beach, CA",
                 url: "https://streaming.live365.com/a49833/playlist.m3u8",
+                trackApi: "live365:a49833",
                 genre: "Jazz"
             },
             {
                 name: "KKJZ Bebop",
+                city: "Long Beach, CA",
                 url: "https://streaming.live365.com/a45189/playlist.m3u8",
+                trackApi: "live365:a45189",
                 genre: "Jazz"
             },
             {
-                name: "KSDS 88.3 San Diego",
+                name: "KSDS 88.3",
+                city: "San Diego, CA",
                 url: "https://ksds-ice.streamguys1.com/ksds.mp3",
                 genre: "Jazz"
+            },
+            {
+                name: "KEXP 90.3",
+                city: "Seattle, WA",
+                url: "https://kexp.streamguys1.com/kexp160.aac",
+                trackApi: "kexp",
+                genre: "R&B/Soul"
+            },
+            {
+                name: "KCRW 89.9",
+                city: "Los Angeles, CA",
+                url: "https://streams.kcrw.com/kcrw_mp3",
+                trackApi: "kcrw",
+                genre: "R&B/Soul"
+            },
+            {
+                name: "WBLS 107.5",
+                city: "New York, NY",
+                url: "https://playerservices.streamtheworld.com/api/livestream-redirect/WBLSFM.mp3",
+                genre: "R&B/Soul"
             }
 
         ];
 
+        // Keep stations grouped by genre (stable sort keeps the order within a genre)
+        const GENRE_ORDER = ['Hip Hop & R&B', 'R&B', 'R&B/Soul', 'Jazz'];
+        stations.sort((a, b) => GENRE_ORDER.indexOf(a.genre) - GENRE_ORDER.indexOf(b.genre));
+
         // DOM elements
-        const playStopBtn = document.getElementById('play-stop-btn');
         const nowPlaying = document.getElementById('now-playing');
+        const trackInfo = document.getElementById('track-info');
+        const shuffleBtn = document.getElementById('shuffle-btn');
         const stationsContainer = document.getElementById('stations-container');
+
+        const eqCanvas = document.getElementById('eq-canvas');
+        const eqCtx = eqCanvas.getContext('2d');
 
         // Audio element
         const audio = new Audio();
         audio.volume = 0.5; // Set default volume
+        // Needed so Web Audio can read the stream (all stations send CORS headers)
+        audio.crossOrigin = 'anonymous';
+
+        // Web Audio analyser for the EQ bars (created on first tap; browsers require a gesture)
+        let audioCtx = null;
+        let analyser = null;
+        let freqData = null;
+
+        // Accent palette (purple / red / pink / blue / green); each station gets its own
+        const PALETTE = [
+            '#8e44ad', '#e84393', '#e74c3c', '#3498db', '#27ae60',
+            '#6c5ce7', '#fd79a8', '#00b894', '#c0392b', '#0984e3'
+        ];
+        let accentColors = ['#3498db', '#9b59b6'];
+
+        // Mix a hex color toward white (amount 0..1)
+        function tint(hex, amount) {
+            const n = parseInt(hex.slice(1), 16);
+            const mix = c => Math.round(c + (255 - c) * amount);
+            return `rgb(${mix(n >> 16)}, ${mix((n >> 8) & 255)}, ${mix(n & 255)})`;
+        }
+
+        // Apply a station's colors to the page and EQ bars
+        function setAccent(station) {
+            const i = stations.indexOf(station);
+            const main = PALETTE[i % PALETTE.length];
+            const second = PALETTE[(i + 3) % PALETTE.length];
+            accentColors = [main, second];
+            const root = document.documentElement.style;
+            root.setProperty('--accent', main);
+            root.setProperty('--accent-2', second);
+            root.setProperty('--accent-soft', main + '22');
+            root.setProperty('--page-bg', tint(main, 0.85));
+        }
+
+        // Song titles: only stations with a public, browser-readable "now playing" feed
+        let trackTimer = null;
+
+        async function fetchTrack(api) {
+            const [kind, id] = api.split(':');
+            if (kind === 'kexp') {
+                const d = await (await fetch('https://api.kexp.org/v2/plays/?limit=1')).json();
+                const play = d.results[0];
+                if (play.play_type === 'airbreak') return 'On air break';
+                return play.song ? `${play.song} — ${play.artist}` : null;
+            }
+            if (kind === 'kcrw') {
+                const d = await (await fetch('https://tracklist-api.kcrw.com/Simulcast')).json();
+                return d.title ? `${d.title} — ${d.artist}` : null;
+            }
+            if (kind === 'live365') {
+                const d = await (await fetch(`https://api.live365.com/station/${id}`)).json();
+                const t = d['current-track'];
+                return t && t.title ? `${t.title} — ${t.artist}` : null;
+            }
+            if (kind === 'radioco') {
+                const d = await (await fetch(`https://public.radio.co/stations/${id}/status`)).json();
+                return d.current_track ? d.current_track.title : null;
+            }
+            return null;
+        }
+
+        // Poll the current station's feed every 20s while it's on
+        function startTrackUpdates(station) {
+            stopTrackUpdates();
+            if (!station.trackApi) return;
+            const update = async () => {
+                try {
+                    const text = await fetchTrack(station.trackApi);
+                    // Ignore late responses after switching stations
+                    if (currentStation !== station) return;
+                    trackInfo.hidden = !text;
+                    trackInfo.textContent = text ? `♪ ${text}` : '';
+                } catch (error) {
+                    console.error('Track info error:', error);
+                }
+            };
+            update();
+            trackTimer = setInterval(update, 20000);
+        }
+
+        function stopTrackUpdates() {
+            clearInterval(trackTimer);
+            trackTimer = null;
+            trackInfo.hidden = true;
+            trackInfo.textContent = '';
+        }
+
+        // EQ bar state
+        const BAR_COUNT = 32;
+        const barHeights = new Array(BAR_COUNT).fill(0);
+        let silentFrames = 0;
 
         // HLS instance
         let hls = null;
 
-        // Current station
+        // Current station (the one playing or loading; null when stopped)
         let currentStation = null;
         let isPlaying = false;
 
@@ -257,13 +449,12 @@
             // Render stations
             renderStations();
 
-            // Set up event listeners
-            playStopBtn.addEventListener('click', togglePlayback);
-
             // Handle audio events
             audio.addEventListener('playing', () => {
+                if (!currentStation) return;
                 isPlaying = true;
-                playStopBtn.textContent = 'Stop';
+                silentFrames = 0;
+                document.body.classList.add('is-playing');
                 nowPlaying.textContent = `Now playing: ${currentStation.name}`;
             });
 
@@ -272,16 +463,88 @@
             });
 
             audio.addEventListener('error', (e) => {
+                // Ignore errors from clearing the source in stopPlayback()
+                if (!audio.getAttribute('src') || !currentStation) return;
                 console.error('Audio error:', e);
-                nowPlaying.textContent = `Error playing: ${currentStation.name}`;
+                const station = currentStation;
                 stopPlayback();
+                nowPlaying.textContent = `Error playing: ${station.name} (stream may be offline)`;
             });
 
-            // Auto-select a random station if none is selected
-            if (stations.length > 0 && !currentStation) {
-                const randomIndex = Math.floor(Math.random() * stations.length);
-                selectStation(stations[randomIndex], true); // Auto-play the random station
+            shuffleBtn.addEventListener('click', shuffleStation);
+
+            window.addEventListener('resize', sizeEqCanvas);
+            sizeEqCanvas();
+            requestAnimationFrame(drawEq);
+        }
+
+        // Hook the audio element into a Web Audio analyser (once)
+        function setupAnalyser() {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            if (!audioCtx) {
+                audioCtx = new AudioCtx();
+                const source = audioCtx.createMediaElementSource(audio);
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.8;
+                freqData = new Uint8Array(analyser.frequencyBinCount);
+                source.connect(analyser);
+                analyser.connect(audioCtx.destination);
             }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // Match the canvas resolution to its displayed size
+        function sizeEqCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            eqCanvas.width = eqCanvas.clientWidth * dpr;
+            eqCanvas.height = eqCanvas.clientHeight * dpr;
+        }
+
+        // Animation loop for the EQ bars
+        function drawEq() {
+            const w = eqCanvas.width;
+            const h = eqCanvas.height;
+            eqCtx.clearRect(0, 0, w, h);
+
+            // Read real levels when available
+            let hasSignal = false;
+            if (isPlaying && analyser) {
+                analyser.getByteFrequencyData(freqData);
+                hasSignal = freqData.some(v => v > 0);
+                silentFrames = hasSignal ? 0 : silentFrames + 1;
+            }
+            // Safari can't analyse some streams; after ~1s of zeros, fake it
+            const simulate = isPlaying && (!analyser || silentFrames > 60);
+
+            for (let i = 0; i < BAR_COUNT; i++) {
+                let target = 0;
+                if (hasSignal) {
+                    // Skip the top bins (mostly empty for radio audio)
+                    const bin = Math.floor(i * (freqData.length * 0.7) / BAR_COUNT);
+                    target = freqData[bin] / 255;
+                } else if (simulate) {
+                    target = 0.25 + Math.random() * 0.6 * (1 - i / BAR_COUNT * 0.5);
+                }
+                // Rise fast, fall slowly
+                const rate = target > barHeights[i] ? 0.5 : 0.08;
+                barHeights[i] += (target - barHeights[i]) * rate;
+
+                const gap = w / BAR_COUNT * 0.25;
+                const barW = w / BAR_COUNT - gap;
+                const barH = Math.max(barHeights[i] * h, 2 * (window.devicePixelRatio || 1));
+                const x = i * (barW + gap) + gap / 2;
+                const gradient = eqCtx.createLinearGradient(0, h, 0, h - barH);
+                gradient.addColorStop(0, accentColors[0]);
+                gradient.addColorStop(1, accentColors[1]);
+                eqCtx.fillStyle = gradient;
+                eqCtx.fillRect(x, h - barH, barW, barH);
+            }
+
+            requestAnimationFrame(drawEq);
         }
 
         // Render stations
@@ -291,13 +554,27 @@
             stations.forEach((station, index) => {
                 const stationElement = document.createElement('div');
                 stationElement.className = 'station-item';
-                if (currentStation && currentStation.name === station.name) {
+                const isActive = currentStation === station;
+                if (isActive) {
                     stationElement.classList.add('active');
                 }
 
                 const nameSpan = document.createElement('span');
                 nameSpan.className = 'station-name';
                 nameSpan.textContent = station.name;
+
+                const citySpan = document.createElement('span');
+                citySpan.className = 'station-city';
+                citySpan.textContent = station.city;
+                nameSpan.appendChild(citySpan);
+
+                // Mini EQ bars on the playing/loading station (animate once audio starts)
+                if (isActive) {
+                    const miniEq = document.createElement('span');
+                    miniEq.className = 'mini-eq';
+                    miniEq.innerHTML = '<span></span><span></span><span></span>';
+                    nameSpan.appendChild(miniEq);
+                }
 
                 const genreSpan = document.createElement('span');
                 genreSpan.className = 'station-genre';
@@ -307,47 +584,54 @@
                 stationElement.appendChild(genreSpan);
 
                 stationElement.addEventListener('click', () => {
-                    selectStation(station, true); // Auto-play when station is selected
+                    // Clicking the active station stops it; any other station plays
+                    if (currentStation === station) {
+                        stopPlayback();
+                    } else {
+                        selectStation(station);
+                    }
                 });
                 stationsContainer.appendChild(stationElement);
             });
         }
 
-        // Select a station
-        function selectStation(station, autoPlay = true) {
-            currentStation = station;
-            renderStations();
-
-            // Update now playing text
-            nowPlaying.textContent = `Selected: ${currentStation.name} (Click Play to start)`;
-
-            // Only auto-play if explicitly requested
-            if (autoPlay) {
-                playCurrentStation();
-            }
+        // Play a random station (never the one already on)
+        function shuffleStation() {
+            const choices = stations.filter(station => station !== currentStation);
+            selectStation(choices[Math.floor(Math.random() * choices.length)]);
         }
 
-        // Toggle playback
-        function togglePlayback() {
-            if (isPlaying) {
-                stopPlayback();
-            } else {
-                playCurrentStation();
-            }
+        // Select a station and start playing it
+        function selectStation(station) {
+            // Stop any existing playback
+            stopPlayback();
+            setupAnalyser();
+            setAccent(station);
+
+            currentStation = station;
+            renderStations();
+            nowPlaying.textContent = `Loading: ${currentStation.name}…`;
+            startTrackUpdates(station);
+            playCurrentStation();
+        }
+
+        // Start audio.play() and report a rejection (e.g. autoplay blocked)
+        function startAudio(station) {
+            audio.play().catch(error => {
+                // Ignore rejections from a station that has since been stopped/switched
+                if (currentStation !== station) return;
+                console.error('Playback error:', error);
+                nowPlaying.textContent = `Couldn't start ${station.name} — tap it again`;
+            });
         }
 
         // Play current station
         function playCurrentStation() {
-            if (!currentStation) {
-                alert('Please select a station first');
-                return;
-            }
-
-            // Stop any existing playback
-            stopPlayback();
+            const station = currentStation;
+            if (!station) return;
 
             // Check if the URL is an HLS stream
-            if (currentStation.url.includes('.m3u8')) {
+            if (station.url.includes('.m3u8')) {
                 // Use hls.js for HLS streams
                 if (Hls.isSupported()) {
                     if (hls) {
@@ -355,34 +639,32 @@
                     }
 
                     hls = new Hls();
-                    hls.loadSource(currentStation.url);
+                    hls.loadSource(station.url);
                     hls.attachMedia(audio);
 
                     hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                        audio.play().catch(error => {
-                            console.error('Playback error:', error);
-                            nowPlaying.textContent = `Click play to start ${currentStation.name}`;
-                        });
+                        startAudio(station);
                     });
 
                     hls.on(Hls.Events.ERROR, (event, data) => {
                         console.error('HLS error:', data);
                         if (data.fatal) {
-                            nowPlaying.textContent = `Error: ${data.type} - ${data.details}`;
                             stopPlayback();
+                            nowPlaying.textContent = `Error playing ${station.name}: ${data.details}`;
                         }
                     });
+                } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
+                    // Safari/iOS play HLS natively
+                    audio.src = station.url;
+                    startAudio(station);
                 } else {
-                    // Fallback for browsers that don't support HLS.js
+                    stopPlayback();
                     nowPlaying.textContent = 'HLS playback not supported in this browser';
                 }
             } else {
                 // For non-HLS streams, use the standard Audio API
-                audio.src = currentStation.url;
-                audio.play().catch(error => {
-                    console.error('Playback error:', error);
-                    nowPlaying.textContent = `Click play to start ${currentStation.name}`;
-                });
+                audio.src = station.url;
+                startAudio(station);
             }
         }
 
@@ -394,11 +676,15 @@
             }
 
             audio.pause();
-            audio.currentTime = 0;
-            audio.src = '';
+            // Setting src = '' fires an 'error' event; removing the attribute doesn't
+            audio.removeAttribute('src');
+            audio.load();
             isPlaying = false;
-            playStopBtn.textContent = 'Play';
-            nowPlaying.textContent = currentStation ? `Selected: ${currentStation.name}` : 'Not playing';
+            document.body.classList.remove('is-playing');
+            stopTrackUpdates();
+            currentStation = null;
+            renderStations();
+            nowPlaying.textContent = 'Tap a station to play';
         }
 
         // Initialize the app
